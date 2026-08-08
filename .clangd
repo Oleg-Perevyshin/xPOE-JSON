@@ -1,0 +1,25 @@
+# .clangd
+# https://clangd.llvm.org/config
+
+# Флаги
+CompileFlags:
+  Remove: [-f*, -m*]
+
+# Подсказки в коде
+InlayHints:
+  Enabled: true
+  BlockEnd: false
+  Designators: false
+  ParameterNames: false
+  DeducedTypes: false
+  TypeNameLimit: 24
+
+# Вспливающие карточки
+Hover:
+  ShowAKA: false
+
+# Семантическая подсветка
+SemanticTokens:
+  DisabledKinds: []
+  DisabledModifiers: []
+  

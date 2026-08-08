@@ -1,0 +1,53 @@
+BasedOnStyle: Google                               # Использует стиль форматирования Google как базу
+IndentWidth: 2                                     # Устанавливает ширину отступа в 2 пробела
+TabWidth: 2                                        # Устанавливает ширину табуляции в 2 пробела
+UseTab: Never                                      # Указывает, что табуляция не должна использоваться, вместо этого используются пробелы
+MaxEmptyLinesToKeep: 3                             # Максимальное количество пустых строк, которые будут сохранены
+NamespaceIndentation: All                          # Все пространства имен будут выровнены
+ColumnLimit: 150                                   # Максимальная длина строки установлена на 150 символов
+PenaltyBreakAssignment: 5                          # Штраф за разбиение присваиваний на несколько строк (меньше значение — более вероятен перенос)
+PenaltyReturnTypeOnItsOwnLine: 150                 # Штраф за перенос типа возвращаемого значения на новую строку
+PointerAlignment: Left                             # Выравнивание указателей выполняется слева
+SpaceBeforeParens: Never                           # Пробел перед скобками не добавляется
+AlignConsecutiveAssignments:                       # Включает выравнивание последовательных присваиваний
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+AlignConsecutiveDeclarations: true                 # Выравнивание последовательных объявлений
+AlignConsecutiveBitFields:                         # Выравнивание битовых полей
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+AlignConsecutiveMacros:                            # Выравнивание последовательных определений макросов
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+AlignConsecutiveTableGenBreakingDAGArgColons:      # Выравнивание двоеточий
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+AlignConsecutiveTableGenCondOperatorColons:        # Выравнивание двоеточий
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+AlignConsecutiveTableGenDefinitionColons:          # Выравнивание двоеточий
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+AlignEscapedNewlines: Left                         # Выравнивание обратных косых черт в экранированных переводах строк
+BreakBeforeBraces: Attach                          # Фигурная скобка на той же строке
+BinPackParameters: true                            # Упаковывает параметры функций в компактный вид
+BinPackArguments: true                             # Упаковывает аргументы функций в компактный вид
+SortIncludes: true                                # Выключаем сортировку #include
+SpaceAfterCStyleCast: true                         # Добавляет пробел после приведения типа
+CommentPragmas: true                               # Форматирует комментарии к директивам препроцессора
+AlignTrailingComments:                             # Выравнивание комментариев
+  Kind: Always
+  OverEmptyLines: 2
+AllowShortBlocksOnASingleLine: Always              # Разрешить короткие блоки на одной строке
+AllowShortCaseExpressionOnASingleLine: true        # Короткое правило с меткой switch в одну строку
+AllowShortCaseLabelsOnASingleLine: true            # Короткие инструкции сокращены до одной строки
+AllowShortCompoundRequirementOnASingleLine: true   # Краткое соединение в одной строке
+AllowShortEnumsOnASingleLine: true                 # Короткие перечисления в одной строке
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse # Короткие операторы if, else if и else на одной строке
+AllowShortLoopsOnASingleLine: true                 # Короткие циклы в одной строке
