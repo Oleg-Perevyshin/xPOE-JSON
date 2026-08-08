@@ -1,0 +1,340 @@
+# 📄 xPOE-JSON
+
+## 📋 Обзор
+
+`poe_json` — лёгкий парсер и генератор JSON (RFC 8259) для встраиваемых систем с ограниченной памятью.
+Использует **арена-аллокатор** (bump allocator) для детерминированного управления памятью без `malloc`.
+Поддерживает полный DOM (Document Object Model) с двусвязными списками.
+
+Кроссплатформенная независимая библиотека без внешних зависимостей — только стандартная библиотека C
+(`stdbool.h`, `stddef.h`, `stdint.h`, `ctype.h`, `math.h`, `stdio.h`, `stdlib.h`, `string.h`). Не требует
+RTOS, вендорского SDK или какого-либо конкретного фреймворка — компилируется как на встраиваемых MCU
+(ARM Cortex-M, ESP32...), так и на хосте.
+
+## 🏗️ Архитектура
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                             POE JSON Library                              │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │                        Arena Allocator (Bump)                       │  │
+│  │  ┌─────────────────────────────────────────────────────────────┐    │  │
+│  │  │            JSON_Context { buffer, size, used, root }        │    │  │
+│  │  └─────────────────────────────────────────────────────────────┘    │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                    │                                      │
+│                                    ▼                                      │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │                             JSON DOM                                │  │
+│  │   ┌─────────────────────────────────────────────────────────────┐   │  │
+│  │   │  JSON { next, prev, child, type, key_name, value_str, num } │   │  │
+│  │   └─────────────────────────────────────────────────────────────┘   │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                           │
+│  ┌─────────────────────────────┐  ┌────────────────────────────────────┐  │
+│  │           Parser            │  │             Generator              │  │
+│  │  JSON_Parse(ctx, string)    │  │  JSON_Print(ctx, item, buf, size)  │  │
+│  └─────────────────────────────┘  └────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+## 🧱 Типы JSON
+
+### 📌 Типы узлов
+
+| Тип | Значение | Описание |
+|-----|----------|----------|
+| `JSON_NULL` | `1 << 0` | null значение |
+| `JSON_False` | `1 << 1` | false |
+| `JSON_True` | `1 << 2` | true |
+| `JSON_Number` | `1 << 3` | число (double) |
+| `JSON_String` | `1 << 4` | строка |
+| `JSON_Array` | `1 << 5` | массив |
+| `JSON_Object` | `1 << 6` | объект |
+
+### 📌 Структура узла
+
+```c
+typedef struct JSON {
+  struct JSON* next;      /* Следующий элемент в списке */
+  struct JSON* prev;      /* Предыдущий элемент в списке */
+  struct JSON* child;     /* Первый дочерний элемент */
+  int          type;      /* Тип узла (битовая маска) */
+  char*        key_name;  /* Имя ключа (только для объектов) */
+  char*        value_str; /* Строковое значение */
+  double       value_num; /* Числовое значение */
+} JSON;
+```
+
+### 🧠 Контекст арена-аллокатора
+
+```c
+typedef struct {
+  uint8_t* buffer;   /* Указатель на буфер */
+  size_t   size;     /* Размер буфера */
+  size_t   used;     /* Использовано байт */
+  JSON*    root;     /* Корневой узел */
+  bool     init;     /* Флаг инициализации */
+} JSON_Context;
+```
+
+## 📖 API Reference
+
+Все функции, кроме `JSON_Print`/`JSON_AddItemToArray`/`JSON_AddItemToObject`, возвращают указатель
+(`NULL` при ошибке) или `void`. Три перечисленные — `bool` (`true` = успех).
+
+### 🚀 Инициализация контекста
+
+```c
+JSON_Context* JSON_InitContext(void* buffer, size_t buffer_size);
+```
+
+Инициализирует контекст без создания корневого узла.
+
+```c
+JSON_Context* JSON_BeginObject(void* buffer, size_t buffer_size);
+```
+
+Инициализирует контекст и создаёт корневой объект.
+
+**Очистка:**
+```c
+void JSON_ClearContext(JSON_Context* ctx);
+```
+
+Просто сбрасывает счётчик `used` (быстрое освобождение всей памяти).
+
+### 🔍 Парсинг
+
+```c
+JSON* JSON_Parse(JSON_Context* ctx, const char* value);
+```
+
+Разбирает JSON строку в DOM. При ошибке откатывает контекст.
+
+### ✏️ Сериализация
+
+```c
+bool JSON_Print(JSON_Context* ctx, const JSON* item, char* output,
+                 size_t out_len, size_t* written_len);
+```
+
+Преобразует DOM в JSON строку. Возвращает `true` при успехе.
+
+### 📌 Доступ к данным
+
+```c
+int JSON_GetArraySize(const JSON* array);
+JSON* JSON_GetArrayItem(const JSON* array, int index);
+JSON* JSON_GetObjectItem(const JSON* object, const char* string);
+bool JSON_Type(const JSON* item, JSON_check_type check);
+```
+
+**Итераторы:**
+```c
+JSON_ArrayForEach(element, array) { /* ... */ }
+JSON_ObjectForEach(element, object) { /* ... */ }
+```
+
+### 📌 Создание узлов
+
+```c
+JSON* JSON_CreateArray(JSON_Context* ctx);
+JSON* JSON_CreateObject(JSON_Context* ctx);
+JSON* JSON_CreateNull(JSON_Context* ctx);
+JSON* JSON_CreateBool(JSON_Context* ctx, bool boolean);
+JSON* JSON_CreateNumber(JSON_Context* ctx, double num);
+JSON* JSON_CreateString(JSON_Context* ctx, const char* string);
+```
+
+### 📌 Добавление в контейнер
+
+```c
+/* Добавление примитивов в объект */
+JSON* JSON_AddNullToObject(JSON_Context* ctx, JSON* obj, const char* key);
+JSON* JSON_AddBoolToObject(JSON_Context* ctx, JSON* obj, const char* key, bool v);
+JSON* JSON_AddNumberToObject(JSON_Context* ctx, JSON* obj, const char* key, double v);
+JSON* JSON_AddStringToObject(JSON_Context* ctx, JSON* obj, const char* key, const char* v);
+
+/* Добавление контейнеров */
+JSON* JSON_AddObjectToObject(JSON_Context* ctx, JSON* obj, const char* key);
+JSON* JSON_AddArrayToObject(JSON_Context* ctx, JSON* obj, const char* key);
+JSON* JSON_AddObjectToArray(JSON_Context* ctx, JSON* array);
+
+/* Универсальные */
+bool JSON_AddItemToObject(JSON_Context* ctx, JSON* obj, const char* key, JSON* item);
+bool JSON_AddItemToArray(JSON_Context* ctx, JSON* array, JSON* item);
+```
+
+### 🛠️ Утилиты
+
+```c
+JSON* JSON_Duplicate(JSON_Context* ctx, const JSON* item);
+void JSON_SortObject(JSON_Context* ctx, JSON* obj);
+```
+
+## 💡 Пример использования
+
+### 📌 Создание JSON
+
+```c
+uint8_t buffer[4096];
+JSON_Context* ctx = JSON_BeginObject(buffer, sizeof(buffer));
+
+JSON* root = ctx->root;
+JSON_AddStringToObject(ctx, root, "name", "Device");
+JSON_AddNumberToObject(ctx, root, "value", 42);
+
+JSON* arr = JSON_AddArrayToObject(ctx, root, "items");
+JSON_AddItemToArray(ctx, arr, JSON_CreateString(ctx, "first"));
+JSON_AddItemToArray(ctx, arr, JSON_CreateString(ctx, "second"));
+
+char output[2048];
+JSON_Print(ctx, root, output, sizeof(output), NULL);
+
+JSON_ClearContext(ctx);
+/* output: {"name":"Device","value":42,"items":["first","second"]} */
+```
+
+### 🔍 Парсинг JSON
+
+```c
+uint8_t buffer[4096];
+JSON_Context* ctx = JSON_InitContext(buffer, sizeof(buffer));
+JSON* root = JSON_Parse(ctx, "{\"name\":\"Device\",\"value\":42}");
+
+if(root) {
+  JSON* name = JSON_GetObjectItem(root, "name");
+  if(JSON_Type(name, JSON_STRING)) {
+    printf("name: %s\n", name->value_str);
+  }
+
+  JSON* value = JSON_GetObjectItem(root, "value");
+  if(JSON_Type(value, JSON_NUMBER)) {
+    printf("value: %f\n", value->value_num);
+  }
+}
+
+JSON_ClearContext(ctx);
+```
+
+### 📌 Итерация по массиву
+
+```c
+JSON* array = JSON_GetObjectItem(root, "items");
+if(JSON_Type(array, JSON_ARRAY)) {
+  JSON* item;
+  JSON_ArrayForEach(item, array) {
+    printf("item: %s\n", item->value_str);
+  }
+}
+```
+
+## 🔤 Escape последовательности
+
+Парсер поддерживает стандартные escape последовательности:
+
+| Последовательность | Результат |
+|-------------------|-----------|
+| `\"` | `"` |
+| `\\` | `\` |
+| `\/` | `/` |
+| `\b` | Backspace |
+| `\f` | Form feed |
+| `\n` | New line |
+| `\r` | Carriage return |
+| `\t` | Tab |
+| `\uXXXX` | Unicode символ (UTF-8) |
+
+## ⚠️ Ограничения
+
+| Параметр | Значение | Примечание |
+|----------|----------|------------|
+| Максимальная глубина | 8 | `JSON_MAX_DEPTH` (переопределяется через `#define` до включения `poe_json.h`) |
+| Размер контекста | buffer - sizeof(JSON_Context) | Вся память в буфере |
+| Кодировка | UTF-8 | Только |
+| Числа | double | 64-bit IEEE 754 |
+
+## ✨ Особенности
+
+1. **Нет динамической памяти** — вся память выделяется из предоставленного буфера
+2. **Bump allocator** — быстрое линейное выделение, O(1) на операцию
+3. **Откат при ошибке** — при ошибке парсинга контекст возвращается в исходное состояние
+4. **Двусвязные списки** — быстрые вставки в начало и конец
+5. **Сортировка ключей** — `JSON_SortObject` упорядочивает ключи лексикографически
+6. **Специальные числа** — поддержка `inf`, `-inf`, `nan` (записываются в кавычках)
+7. **Без `%lld`/`%llu`** — сериализация целых вне диапазона `int`/`long` идёт вручную (`ll_to_str`,
+   деление/остаток по 10, без `printf`) — актуально для встраиваемых libc (например, `newlib-nano`),
+   которые не поддерживают 64-битные форматы `printf` ни при каком линкер-флаге
+
+## 🧾 Форматы чисел
+
+| Вход | Выход |
+|------|-------|
+| `123` | `123` |
+| `123.456` | `123.456` |
+| `0.001` | `0.001` |
+| `-0.5` | `-0.5` |
+| `1e6` | `1000000` |
+| `inf` | `"inf"` |
+| `nan` | `"nan"` |
+
+Дробная часть сериализуется с точностью до 6 знаков после запятой, хвостовые нули отбрасываются.
+
+## 📦 Зависимости
+
+Только стандартная библиотека C: `ctype.h`, `math.h` (`-lm` при линковке на хосте), `stdio.h`, `stdlib.h`,
+`string.h`. Никаких сторонних библиотек, RTOS или платформенных SDK.
+
+## 🧩 Интеграция в проект
+
+Библиотека — два файла: `poe_json.h` + `poe_json.c`. Никакой генерации, никаких скрытых зависимостей
+между файлами проекта. Чтобы подключить в другой проект — скопируйте папку `poe_json` (или просто эти
+два файла) в дерево компонентов/исходников и добавьте `poe_json.c` в сборку.
+
+## 🧪 Сборка и тесты (автономно)
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+`CMakeLists.txt` в корне собирает `poe_json` как статическую библиотеку и (по умолчанию,
+`POE_JSON_BUILD_TESTS=ON`) юнит-тест `tests/test_json.c` через CTest. Для встраивания в проект как
+исходники (а не как отдельная CMake-цель) сборочный файл не обязателен — достаточно двух `.c`/`.h`.
+
+## 💡 Пример полного цикла
+
+```c
+/* 1. Создание JSON */
+uint8_t create_buf[4096];
+JSON_Context* create_ctx = JSON_BeginObject(create_buf, sizeof(create_buf));
+JSON_AddStringToObject(create_ctx, create_ctx->root, "status", "ok");
+JSON_AddNumberToObject(create_ctx, create_ctx->root, "progress", 50);
+
+char json_str[1024];
+JSON_Print(create_ctx, create_ctx->root, json_str, sizeof(json_str), NULL);
+JSON_ClearContext(create_ctx);
+
+/* 2. Парсинг JSON */
+uint8_t parse_buf[4096];
+JSON_Context* parse_ctx = JSON_InitContext(parse_buf, sizeof(parse_buf));
+JSON* root = JSON_Parse(parse_ctx, json_str);
+
+JSON* status = JSON_GetObjectItem(root, "status");
+if(status && JSON_Type(status, JSON_STRING)) {
+  printf("status: %s\n", status->value_str);
+}
+
+JSON* progress = JSON_GetObjectItem(root, "progress");
+if(progress && JSON_Type(progress, JSON_NUMBER)) {
+  printf("progress: %.0f%%\n", progress->value_num);
+}
+
+JSON_ClearContext(parse_ctx);
+```
+
+---
+© 2026 Олег Перевышин — Все права защищены
