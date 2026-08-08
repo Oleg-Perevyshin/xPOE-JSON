@@ -175,6 +175,9 @@ JSON* JSON_Duplicate(JSON_Context* ctx, const JSON* item);
 void JSON_SortObject(JSON_Context* ctx, JSON* obj);
 ```
 
+`printf` в примерах ниже — только для читаемости примера; сама библиотека `stdio.h` не требует, на
+встраиваемой цели замените на свой логгер (`SC_LOG_*` и т.п.).
+
 ## 💡 Пример использования
 
 ### 📌 Создание JSON

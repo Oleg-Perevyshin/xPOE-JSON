@@ -445,17 +445,16 @@ static bool print_value(const JSON* item, char* buf, size_t size, size_t* pos, s
         long long int_part;
         int       frac_part = 0;
 
-        if(aval < 9223372036854775808.0) { /* 2^63 — граница безопасного приведения к long long */
-          int_part    = (long long) aval;  /* aval>=0, приведение корректно */
+        if(aval < 9223372036854775808.0) {
+          int_part    = (long long) aval;
           double frac = aval - (double) int_part;
           frac_part   = (int) (frac * 1000000.0 + 0.5);
-          if(frac_part >= 1000000) {       /* округление перенесло дробную часть в целую (напр. 0.9999999) */
+          if(frac_part >= 1000000) {
             frac_part -= 1000000;
             int_part++;
           }
         } else {
-          /* |val| вне диапазона long long — приведение было бы UB. Насыщаем границей: double
-           * за пределами 2^52 всё равно хранит только целые значения, дробной части там нет */
+          /* val вне диапазона. Насыщаем границей: double за пределами 2^52 всё равно хранит только целые значения */
           int_part = 9223372036854775807LL;
         }
 
@@ -759,7 +758,7 @@ JSON* JSON_AddObjectToArray(JSON_Context* ctx, JSON* array) {
 }
 
 /* ********************************************************** */
-/* Дублирование */
+/* Дублирование (рекурсивно, глубина ограничена xPOE_JSON_MAX_DEPTH — стек безопасен) */
 static JSON* dup_rec(JSON_Context* ctx, const JSON* src, size_t d) {
   if(!src || d > xPOE_JSON_MAX_DEPTH) return NULL;
   JSON* n = alloc_node(ctx);
