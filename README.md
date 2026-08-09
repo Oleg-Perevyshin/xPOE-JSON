@@ -331,10 +331,11 @@ if(JSON_Type(array, JSON_ARRAY)) {
 не завязана ни на какую платформу.
 
 **ESP-IDF** — репозиторий одновременно является ESP-IDF компонентом (`idf_component.yml` +
-`CMakeLists.txt` в корне, тот же `poe_json.c`/`poe_json.h`, без дублирования файлов):
+`CMakeLists.txt` в корне, тот же `poe_json.c`/`poe_json.h`, без дублирования файлов). Опубликован в
+[ESP Component Registry](https://components.espressif.com/components/oleg-perevyshin/poe_json):
 
 ```bash
-idf.py add-dependency "poe_json^1.0.0"     # после публикации в ESP Component Registry
+idf.py add-dependency "oleg-perevyshin/poe_json^1.0.0"
 ```
 
 или локально, без публикации — путём в `dependencies` вашего компонента:
