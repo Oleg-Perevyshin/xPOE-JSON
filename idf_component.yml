@@ -1,0 +1,18 @@
+version: "1.0.0"
+description: >
+  Лёгкий кроссплатформенный парсер и генератор JSON (RFC 8259) для встраиваемых систем (без malloc, без strtod/sprintf, без зависимости от locale).
+url: "https://github.com/Oleg-Perevyshin/xPOE-JSON"
+repository: "https://github.com/Oleg-Perevyshin/xPOE-JSON.git"
+documentation: "https://github.com/Oleg-Perevyshin/xPOE-JSON/blob/main/README.md"
+issues: "https://github.com/Oleg-Perevyshin/xPOE-JSON/issues"
+license: "MIT"
+tags:
+  - json
+  - json-parser
+  - embedded
+  - no-malloc
+files:
+  use_gitignore: true
+  exclude:
+    - "tests/**/*"
+    - ".vscode/**/*"

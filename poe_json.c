@@ -23,10 +23,12 @@ JSON_Context* JSON_BeginObject(void* buffer, size_t buffer_size) {
   JSON_Context* ctx = JSON_InitContext(buffer, buffer_size);
   if(!ctx) return NULL;
   ctx->root = JSON_CreateObject(ctx);
-  if(!ctx->root) {
+  if(!ctx->root) { /* недостижимо при текущих константах, см. README */
+    /* LCOV_EXCL_START */
     ctx->used = 0;
     ctx->init = false;
     return NULL;
+    /* LCOV_EXCL_STOP */
   }
   return ctx;
 }
@@ -40,7 +42,7 @@ void JSON_ClearContext(JSON_Context* ctx) {
 /* Выделение из буфера (Bump Allocator) */
 static void* json_bump_alloc(JSON_Context* ctx, size_t size) {
   if(!ctx || !ctx->init) return NULL;
-  size = (size + 7) & ~7; /* 8 байт не переопределять: JSON содержит double, узел требует это выравнивание */
+  size = (size + 7) & ~7; /* 8 байт — не менять, см. README */
   if(ctx->used + size > ctx->size) return NULL;
   void* ptr = ctx->buffer + ctx->used;
   ctx->used += size;
@@ -61,7 +63,6 @@ static char* json_str_alloc(JSON_Context* ctx, const char* src, size_t len) {
 /* ********************************************************** */
 /* Парсинг строк (два прохода: расчет длины -> выделение -> запись) */
 static bool parse_string(JSON* item, const char* input, size_t max_len, size_t* out_offset, JSON_Context* ctx) {
-  /* добавили параметр out_offset, изменили сигнатуру */
   if(input[0] != '"') return false;
   const char* p       = input + 1;
   size_t      raw_len = 0, unescaped_len = 0;
@@ -146,8 +147,7 @@ static bool parse_string(JSON* item, const char* input, size_t max_len, size_t* 
   return true;
 }
 
-/* Разбор числа без strtod — грамматика уже провалидирована вызывающим кодом (см. ниже), поэтому
- * разбор не зависит от locale (в отличие от strtod, где разделитель дробной части варьируется) */
+/* Разбор числа без strtod — не зависит от locale, см. README */
 static double parse_number(const char* input, size_t num_len) {
   size_t i   = 0;
   bool   neg = false;
@@ -204,21 +204,18 @@ static bool parse_value(JSON* item, const char* input, size_t len, size_t* out_o
   input += i;
   len -= i;
 
-  /* Парсинг null */
   if(len >= 4 && strncmp(input, "null", 4) == 0) {
     item->type = JSON_NULL;
     *out_offset += i + 4;
     return true;
   }
 
-  /* Парсинг bool */
   if(len >= 5 && strncmp(input, "false", 5) == 0) {
     item->type = JSON_False;
     *out_offset += i + 5;
     return true;
   }
 
-  /* Парсинг bool */
   if(len >= 4 && strncmp(input, "true", 4) == 0) {
     item->type      = JSON_True;
     item->value_num = 1;
@@ -226,7 +223,6 @@ static bool parse_value(JSON* item, const char* input, size_t len, size_t* out_o
     return true;
   }
 
-  /* Парсинг числа */
   if(input[0] == '-' || isdigit((unsigned char) input[0])) {
     const char* p = input;
     if(*p == '-') p++;
@@ -250,7 +246,6 @@ static bool parse_value(JSON* item, const char* input, size_t len, size_t* out_o
     return true;
   }
 
-  /* Парсинг строки */
   if(input[0] == '"') {
     size_t str_offset = 0;
     if(!parse_string(item, input, len, &str_offset, ctx)) return false;
@@ -258,7 +253,6 @@ static bool parse_value(JSON* item, const char* input, size_t len, size_t* out_o
     return true;
   }
 
-  /* Парсинг массива */
   if(input[0] == '[') {
     JSON*  head = NULL;
     JSON*  prev = NULL;
@@ -299,7 +293,6 @@ static bool parse_value(JSON* item, const char* input, size_t len, size_t* out_o
     return true;
   }
 
-  /* Парсинг объекта */
   if(input[0] == '{') {
     JSON*  head = NULL;
     JSON*  prev = NULL;
@@ -381,7 +374,7 @@ JSON* JSON_Parse(JSON_Context* ctx, const char* value) {
 }
 
 /* ********************************************************** */
-/* int64 → строка без printf ("%lld" не поддерживается nano-форматом newlib) */
+/* int64 → строка без printf, см. README */
 static int ll_to_str(char* buf, long long v) {
   bool               neg = v < 0;
   unsigned long long uv  = neg ? (unsigned long long) (-(v + 1)) + 1ULL : (unsigned long long) v;
@@ -440,7 +433,7 @@ static bool print_value(const JSON* item, char* buf, size_t size, size_t* pos, s
       } else {
         char      tmp[40];
         int       len;
-        bool      negative = signbit(val); /* val<0 не ловит -0.0 (IEEE754: -0.0<0 ложно) */
+        bool      negative = signbit(val); /* val<0 не ловит -0.0, см. README */
         double    aval     = negative ? -val : val;
         long long int_part;
         int       frac_part = 0;
@@ -454,8 +447,7 @@ static bool print_value(const JSON* item, char* buf, size_t size, size_t* pos, s
             int_part++;
           }
         } else {
-          /* val вне диапазона. Насыщаем границей: double за пределами 2^52 всё равно хранит только целые значения */
-          int_part = 9223372036854775807LL;
+          int_part = 9223372036854775807LL; /* насыщение вместо UB, см. README */
         }
 
         int p = 0;
@@ -541,7 +533,6 @@ static bool print_value(const JSON* item, char* buf, size_t size, size_t* pos, s
         }
         first = false;
 
-        /* ключ */
         if(*pos + 1 > size) return false;
         buf[(*pos)++] = '"';
         const char* p = ch->key_name;
@@ -556,7 +547,6 @@ static bool print_value(const JSON* item, char* buf, size_t size, size_t* pos, s
         if(*pos + 1 > size) return false;
         buf[(*pos)++] = '"';
 
-        /* : */
         if(*pos + 1 > size) return false;
         buf[(*pos)++] = ':';
         if(!print_value(ch, buf, size, pos, depth + 1)) return false;
@@ -721,7 +711,7 @@ JSON* JSON_AddNumberToObject(JSON_Context* ctx, JSON* obj, const char* k, double
   size_t saved_used = ctx->used;
   JSON*  i          = JSON_CreateNumber(ctx, v);
   if(i && JSON_AddItemToObject(ctx, obj, k, i)) return i;
-  ctx->used = saved_used; /* Откат при ошибке */
+  ctx->used = saved_used;
   return NULL;
 }
 
@@ -758,7 +748,7 @@ JSON* JSON_AddObjectToArray(JSON_Context* ctx, JSON* array) {
 }
 
 /* ********************************************************** */
-/* Дублирование (рекурсивно, глубина ограничена xPOE_JSON_MAX_DEPTH — стек безопасен) */
+/* Дублирование — рекурсивно, глубина ограничена, см. README */
 static JSON* dup_rec(JSON_Context* ctx, const JSON* src, size_t d) {
   if(!src || d > xPOE_JSON_MAX_DEPTH) return NULL;
   JSON* n = alloc_node(ctx);
@@ -768,6 +758,10 @@ static JSON* dup_rec(JSON_Context* ctx, const JSON* src, size_t d) {
   if(src->key_name) {
     n->key_name = json_str_alloc(ctx, src->key_name, strlen(src->key_name));
     if(!n->key_name) return NULL;
+  }
+  if(src->value_str) {
+    n->value_str = json_str_alloc(ctx, src->value_str, strlen(src->value_str));
+    if(!n->value_str) return NULL;
   }
   JSON* last = NULL;
   for(const JSON* c = src->child; c; c = c->next) {
@@ -790,8 +784,7 @@ static JSON* dup_rec(JSON_Context* ctx, const JSON* src, size_t d) {
 JSON* JSON_Duplicate(JSON_Context* ctx, const JSON* item) { return dup_rec(ctx, item, 0); }
 
 /* ********************************************************** */
-/* Сортировка (итеративная bottom-up сортировка слиянием по next — без рекурсии,
- * O(1) стека, безопасно для объектов с большим числом ключей на MCU) */
+/* Сортировка — итеративная сортировка слиянием, без рекурсии, см. README */
 static JSON* list_merge_sort(JSON* list) {
   if(!list) return NULL;
   size_t insize = 1;
@@ -848,7 +841,7 @@ void JSON_SortObject(JSON_Context* ctx, JSON* obj) {
   (void) ctx;
   if(!obj || (obj->type & 0xFF) != JSON_Object) return;
   JSON* head = list_merge_sort(obj->child);
-  /* list_merge_sort работает только через next — восстанавливаем prev одним проходом */
+  /* prev не участвует в сортировке — восстанавливаем отдельно, см. README */
   JSON* prev = NULL;
   for(JSON* p = head; p; p = p->next) {
     p->prev = prev;

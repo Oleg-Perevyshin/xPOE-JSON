@@ -27,10 +27,10 @@
 
 /* Структура узла DOM (двусвязный список для детей + данные) */
 typedef struct JSON {
-  int          type;      /* Тип узла: JSON_NULL, JSON_False, JSON_True, JSON_Number, JSON_String, JSON_Array, JSON_Object */
   struct JSON* next;      /* Указатель на следующий элемент в списке (для siblings) */
   struct JSON* prev;      /* Указатель на предыдущий элемент в списке */
   struct JSON* child;     /* Указатель на первый дочерний элемент */
+  int          type;      /* Тип узла: JSON_NULL, JSON_False, JSON_True, JSON_Number, JSON_String, JSON_Array, JSON_Object */
   char*        key_name;  /* Имя ключа (только для объектов, для массивов = NULL) */
   char*        value_str; /* Строковое значение (только для JSON_String) */
   double       value_num; /* Числовое значение (только для JSON_Number, JSON_True=1, JSON_False=0) */
@@ -40,7 +40,7 @@ typedef struct JSON {
 typedef enum {
   JSON_INVALID = 0,
   JSON_NULL    = (1 << 0),            /* 1 */
-  JSON_BOOL    = (1 << 1) | (1 << 2), /* 6 - для true/false */
+  JSON_BOOL    = (1 << 1) | (1 << 2), /* 6 */
   JSON_NUMBER  = (1 << 3),            /* 8 */
   JSON_STRING  = (1 << 4),            /* 16 */
   JSON_ARRAY   = (1 << 5),            /* 32 */
