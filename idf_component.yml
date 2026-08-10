@@ -1,4 +1,4 @@
-version: "1.0.1"
+version: "1.0.2"
 description: >
   Лёгкий кроссплатформенный парсер и генератор JSON (RFC 8259) для встраиваемых систем
 url: "https://github.com/Oleg-Perevyshin/xPOE-JSON"

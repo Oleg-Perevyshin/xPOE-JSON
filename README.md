@@ -393,4 +393,10 @@ JSON_ClearContext(parse_ctx);
 ```
 
 ---
+
+## 📧 Контакты
+
 © 2026 Олег Перевышин — лицензия [MIT](LICENSE)
+
+E-Mail: oleg.perevyshin@gmail.com
+
